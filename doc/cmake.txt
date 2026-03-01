@@ -8,81 +8,169 @@ License: Same terms as Vim itself (see |license|)
 
 INTRODUCTION                                    *cmake*
 
-When working on a CMake project, this plugin provides a single command that
-changes the makeprg make command's working directory to the closest 'build'
-directory (see g:cmake_build_dir) upwards
+When working on a CMake project, this plugin provides commands to configure
+and build CMake projects without leaving Vim. The plugin automatically locates
+the build directory (see |g:cmake_build_dir|), persists that location across
+sessions, and wires up |'makeprg'| so that |:make| builds in the correct
+directory.
 
-COMMANDS                                        *cmake-commands*
+==============================================================================
+COMMANDS                                        *cmake-commands* *:CMake*
 
-:CMake [args]           Runs the cmake command as `'cmake ..'`, starting in
+:CMake [target] [args]  Runs the cmake command as `'cmake ..'`, starting in
                         first directory called 'build', found in an upwards
                         search. All arguments are directly passed on to CMake.
                         Also modifies the |':make'| command to build in
                         that directory.
 
-                                                *:CMakeClean*
-:CMakeClean             deletes all files in the build directory. You can
-                        think of this as a |'CMake'| version of make clean.
+                        This command will locate the build directory, configure
+                        the project if it has not been configured yet 
+                        (no CMakeCache.txt found), then build [target] using
+                        |:make|.
 
-                                                *:CMakeFindBuildDir*
-:CMakeFindBuildDir      resets the build directory path set for the current buffer
-                        and then tries to find a new one. Useful if it previously
-                        found a wrong path to then reset it after a new build folder
-                        has been created for example.
+                        The first parameter must be a target name and other
+                        cmake parameters can follow the target in any order.
 
-                                                *:CMakeBuild*
-:CMakeBuild [target]    Builds the specified target in the current CMake
-                        build directory. |'CMakeBuild'| is a thin wrapper around
-                        |'make'| with tab completion provided for available
-                        build targets: >
-                            :CMakeBuild <Tab>
+                        Build directory discovery follows this order:
+                          1. Use |b:build_dir| if already set.
+                          2. Restore from the session cache (.vim-cmake).
+                          3. Search upward from the current file for a
+                             directory named |g:cmake_build_dir|.
+
+                        Once found, the build directory is saved to the
+                        session cache automatically.
+
+                        Configure is skipped when CMakeCache.txt already
+                        exists. Use |:CMakeConfigure| to force a re-run.
+
+                        Tab completion is available for [target]: >
+                            :CMake my_<Tab>
 <
-                        Target names are completed using the list of targets
-                        reported by `'cmake --build <build_dir> --target help'`.
-
                         When invoked without arguments, the default build
                         target is used.
 
-                        This command relies on the build directory previously
-                        detected or set by |'CMake'| or |'CMakeFindBuildDir'|,
-                        and updates the |'makeprg'| command accordingly.
+                                                *:CMakeConfigure*
+:CMakeConfigure [args]  Run cmake configuration in the build directory,
+                        passing [args] directly to cmake. Use this to
+                        explicitly re-run configuration, for example after
+                        changing a compiler or build type: >
+                            :CMakeConfigure -DCMAKE_BUILD_TYPE=Debug
+<
+                        Plugin global variables are translated into
+                        cmake arguments automatically when set. See
+                        |cmake-variables| for the full list.
 
-VARIABLES                                       *cmake-variables*
+                                                *:CMakeClean*
+:CMakeClean!            Delete all files in the build directory, equivalent
+                        to a cmake clean. Prompts for confirmation before
+                        proceeding.
 
-g:cmake_install_prefix           same as -DCMAKE_INSTALL_PREFIX
+                        Add [!] to skip the confirmation prompt: >
+                            :CMakeClean!
+<
+                        The command refuses to delete the build directory if:
+                          - It does not contain a CMakeCache.txt (unless [!]
+                            is given).
+                          - It resolves to the home directory, current working
+                            directory, or filesystem root.
 
-g:cmake_build_type               same as -DCMAKE_BUILD_TYPE
+                        After a successful clean, |b:build_dir| is unset and
+                        the session cache is cleared, so the next |:CMake|
+                        call will re-run discovery and configuration.
 
-g:cmake_cxx_compiler             same as -DCMAKE_CXX_COMPILER, however, this will have
-                                 no effect until you run :CMakeClean and :CMake.
+                                                *:CMakeFindBuildDir*
+:CMakeFindBuildDir      Clear the current build directory path for the current
+                        buffer and the session cache, then search for a new one.
+                        Useful after creating a new build directory or when
+                        the wrong directory was previously detected.
 
-g:cmake_c_compiler               same as -DCMAKE_C_COMPILER, however, this will have
-                                 no effect until you run :CMakeClean and :CMake.
-
-g:cmake_build_shared_libs        same as -DBUILD_SHARED_LIBS
-
-g:cmake_toolchain_file           same as -DCMAKE_TOOLCHAIN_FILE
-
-g:cmake_build_dir                set the cmake 'build' directory, default: 'build'
-
-g:cmake_project_generator        set project generator, however, this will have
-                                 no effect until you run :CMakeClean and :CMake.
-
-g:cmake_usr_args                 custom user arguments. Ex: 'let g:cmake_usr_args="-DDEBUG=YES"'
-
-b:build_dir                      the path to the cmake build directory for the current buffer.
-                                 This variable is set with the first :CMake or :CMakeFindBuildDir call.
-                                 Once found, it will not be searched for again unless you call
-                                 :CMakeFindBuildDir. If automatic finding is not sufficient you can set
-                                 this variable manually to the build dir of your choice.
-
+==============================================================================
 OPTIONS                                         *cmake-options*
 
-g:cmake_export_compile_commands  same as -DCMAKE_EXPORT_COMPILE_COMMANDS=ON, useful for
-                                 exporting a compilation database to be used with YCM
-                                 (https://github.com/Valloric/YouCompleteMe#c-family-semantic-completion)
-                                 CMake only supports this flag with Ninja and Makefile generators.
+                                                *g:cmake_build_dir*
+g:cmake_build_dir       The directory name to search for when locating the
+                        build directory. Searched upward from the current
+                        file. Default: 'build'. >
+                            let g:cmake_build_dir = 'build'
+<
+                                                *b:build_dir*
+b:build_dir             The resolved path to the cmake build directory for
+                        the current buffer. Set automatically by |:CMake| or
+                        |:CMakeFindBuildDir|. Can be set manually to override
+                        automatic discovery: >
+                            let b:build_dir = '/path/to/my/build'
+<
+                        Once set it is not overwritten unless you call
+                        |:CMakeFindBuildDir| or set it explicitly.
 
-g:cmake_ycm_symlinks             create a symlink to the compile_commands.json file in the
-                                 root of the project (build/..) if the file is found.
+                                                *g:cmake_install_prefix*
+g:cmake_install_prefix  Passed to cmake as -DCMAKE_INSTALL_PREFIX.
+
+                                                *g:cmake_build_type*
+g:cmake_build_type      Passed to cmake as -DCMAKE_BUILD_TYPE. >
+                            let g:cmake_build_type = 'Debug'
+<
+                                                *g:cmake_cxx_compiler*
+g:cmake_cxx_compiler    Passed to cmake as -DCMAKE_CXX_COMPILER. Changes
+                        take effect after |:CMakeClean| and |:CMakeConfigure|.
+
+                                                *g:cmake_c_compiler*
+g:cmake_c_compiler      Passed to cmake as -DCMAKE_C_COMPILER. Changes
+                        take effect after |:CMakeClean| and |:CMakeConfigure|.
+
+                                                *g:cmake_build_shared_libs*
+g:cmake_build_shared_libs
+                        Passed to cmake as -DBUILD_SHARED_LIBS.
+
+                                                *g:cmake_toolchain_file*
+g:cmake_toolchain_file  Passed to cmake as -DCMAKE_TOOLCHAIN_FILE.
+
+                                                *g:cmake_project_generator*
+g:cmake_project_generator
+                        Passed to cmake as -G. Changes take effect after
+                        |:CMakeClean| and |:CMakeConfigure|.
+
+                                                *g:cmake_export_compile_commands*
+g:cmake_export_compile_commands
+                        Passed to cmake as -DCMAKE_EXPORT_COMPILE_COMMANDS.
+                        Default: 0.
+
+                                                *g:cmake_ycm_symlinks*
+g:cmake_ycm_symlinks    When set to 1, creates a symlink to the generated
+                        compile_commands.json in the project root for use
+                        with YouCompleteMe or any LSP client that expects it
+                        there. Default: 0.
+
+                                                *g:cmake_use_smp*
+g:cmake_use_smp         When set to 1, passes -j{nproc} to the build command
+                        to enable parallel builds. Requires `nproc` to be
+                        available on PATH. Default: 0.
+
+                                                *g:cmake_usr_args*
+g:cmake_usr_args        Arbitrary extra arguments passed to cmake during
+                        configuration. Appended after all other arguments: >
+                            let g:cmake_usr_args = '-DSOME_OPTION=ON'
+<
+
+==============================================================================
+SESSION CACHE                                           *cmake-cache*
+
+The plugin persists |b:build_dir| across sessions using a dotfile named
+.vim-cmake written to the project root (one level above the build directory).
+This file is read automatically on |BufReadPost| and written on |BufWritePost|.
+
+The cache is cleared automatically by |:CMakeFindBuildDir| and |:CMakeClean|.
+It is also invalidated silently if the recorded directory no longer exists.
+
+The .vim-cmake file is a per-developer local setting and should be added to
+the project .gitignore: >
+    echo '.vim-cmake' >> .gitignore
+<
+==============================================================================
+LICENSE                                                 *cmake-license*
+
+Copyright (c) Dirk Van Haerenborgh. Distributed under the
+same terms as Vim itself. See |license|.
+
+ vim:tw=78:ts=8:ft=help:norl:
 
