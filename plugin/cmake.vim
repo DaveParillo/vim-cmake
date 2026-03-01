@@ -1,8 +1,8 @@
 " cmake.vim - Vim plugin to make working with CMake a little nicer
 " Maintainer:   Dirk Van Haerenborgh <http://vhdirk.github.com/>
-" Version:      0.2
+" Version:      0.3
 
-let s:cmake_plugin_version = '0.2'
+let s:cmake_plugin_version = '0.3'
 
 if exists("loaded_cmake_plugin")
   finish
@@ -157,7 +157,6 @@ function! s:find_smp()
   return 0
 endfunction
 
-command! -complete=customlist,ListTargets -nargs=1 Make :make <args>
 function! ListTargets(A, L, C)
     if !exists("b:build_dir")
         return []
@@ -168,6 +167,7 @@ function! ListTargets(A, L, C)
 endfunction
 
 " Public Interface:
+command! -complete=customlist,ListTargets -nargs=1 Make :make <args>
 command! -nargs=? CMake call s:cmake(<f-args>)
 command! CMakeClean call s:cmakeclean()
 command! CMakeFindBuildDir call s:cmake_find_build_dir()
@@ -188,7 +188,9 @@ function! s:cmake(...)
     let l:smp = ''
   endif
 
-  let &makeprg = 'cmake --build ' . shellescape(b:build_dir) . l:smp . ' --target'
+  " let &makeprg = 'cmake --build ' . shellescape(b:build_dir) . l:smp . ' --target'
+  let &makeprg = 'sh -c ''cmake --build ' . shellescape(b:build_dir) . l:smp .
+        \ ' ${1:+--target "$@"}'' sh'
   call s:cmake_configure(a:000)
 endfunction
 

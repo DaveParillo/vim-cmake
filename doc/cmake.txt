@@ -14,21 +14,40 @@ directory (see g:cmake_build_dir) upwards
 
 COMMANDS                                        *cmake-commands*
 
-:CMake [args]           Runs the cmake command as 'cmake ..', starting in
+:CMake [args]           Runs the cmake command as `'cmake ..'`, starting in
                         first directory called 'build', found in an upwards
                         search. All arguments are directly passed on to CMake.
-                        Also modifies the :make command to build in
+                        Also modifies the |':make'| command to build in
                         that directory.
 
+                                                *:CMakeClean*
 :CMakeClean             deletes all files in the build directory. You can
-                        think of this as a CMake version of make clean.
+                        think of this as a |'CMake'| version of make clean.
 
+                                                *:CMakeFindBuildDir*
 :CMakeFindBuildDir      resets the build directory path set for the current buffer
                         and then tries to find a new one. Useful if it previously
                         found a wrong path to then reset it after a new build folder
                         has been created for example.
 
-VARIABLES                                        *cmake-variables*
+                                                *:CMakeBuild*
+:CMakeBuild [target]    Builds the specified target in the current CMake
+                        build directory. |'CMakeBuild'| is a thin wrapper around
+                        |'make'| with tab completion provided for available
+                        build targets: >
+                            :CMakeBuild <Tab>
+<
+                        Target names are completed using the list of targets
+                        reported by `'cmake --build <build_dir> --target help'`.
+
+                        When invoked without arguments, the default build
+                        target is used.
+
+                        This command relies on the build directory previously
+                        detected or set by |'CMake'| or |'CMakeFindBuildDir'|,
+                        and updates the |'makeprg'| command accordingly.
+
+VARIABLES                                       *cmake-variables*
 
 g:cmake_install_prefix           same as -DCMAKE_INSTALL_PREFIX
 
@@ -57,7 +76,7 @@ b:build_dir                      the path to the cmake build directory for the c
                                  :CMakeFindBuildDir. If automatic finding is not sufficient you can set
                                  this variable manually to the build dir of your choice.
 
-OPTIONS                                        *cmake-options*
+OPTIONS                                         *cmake-options*
 
 g:cmake_export_compile_commands  same as -DCMAKE_EXPORT_COMPILE_COMMANDS=ON, useful for
                                  exporting a compilation database to be used with YCM
