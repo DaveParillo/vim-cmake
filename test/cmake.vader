@@ -1,49 +1,226 @@
+" cmake.vader - Tests for vim-cmake
+" Uses vader.vim: https://github.com/junegunn/vader.vim
+
+" ============================================================
+" Setup and teardown
+" ============================================================
+
 Before:
-  " Ensure we are in the test directory
-  if isdirectory("test")
-    cd test
-  endif
-
   if !exists("test_dir")
-    let test_dir = fnamemodify(getcwd(), ':p')
+    let test_dir = globpath(&rtp, 'test/cmake.vader')
+    let test_dir = fnamemodify(test_dir, ':p:h')
   endif
+  exec "cd" fnameescape(test_dir)
 
-  Assert !isdirectory("test project/tmp-build"), "TEST ERROR: build directory was not properly deleted"
+  " Clean unit test scratch space
+  if exists("g:unit_test_dir")
+    call delete(g:unit_test_dir, 'rf')
+  endif
+  let g:unit_test_dir = tempname()
+  call mkdir(g:unit_test_dir . '/build', 'p')
+  call writefile([''], g:unit_test_dir . '/build/CMakeCache.txt')
+
+  " Clean integration test build directory
+  Assert !isdirectory("test project/tmp-build"),
+        \ "TEST ERROR: build directory was not properly deleted"
   echo system("mkdir 'test project/tmp-build'")
-  Assert isdirectory("test project/tmp-build"), "TEST ERROR: build directory was not created"
+  Assert isdirectory("test project/tmp-build"),
+        \ "TEST ERROR: build directory was not created"
 
-  " Under travis CI the entire project is in a build/ directory
+  " Under Travis CI the entire project is in a build/ directory
   " which will make the search from cwd always return a result.
   " To be able to test searching build dir from current file, the
   " build dir needs to be named differently as a workaround.
   let g:cmake_build_dir = "tmp-build"
+
+  " Reset plugin state
+  unlet! b:build_dir
+
+  " Reset to defaults rather than unlet - autoload code references these directly
+  let g:cmake_export_compile_commands = 0
+  let g:cmake_ycm_symlinks = 0
+  let g:cmake_use_smp = 0
+
 After:
+  " Restore integration test environment
   exec "cd" fnameescape(test_dir)
   echo system("rm -rf 'test project/tmp-build'")
   echo system("rm -f 'test project/compile_commands.json'")
+  echo system("rm -f 'test project/.vim-cmake'")
+
+  " Tear down unit test scratch space
+  if exists("g:unit_test_dir")
+    call delete(g:unit_test_dir, 'rf')
+    unlet g:unit_test_dir
+  endif
+
+  " Reset plugin state
+  unlet! b:build_dir
+  unlet! g:cmake_build_dir
+  " Reset to defaults rather than unlet - autoload code references these directly
+  let g:cmake_export_compile_commands = 0
+  let g:cmake_ycm_symlinks = 0
+  let g:cmake_use_smp = 0
+
+" ============================================================
+" Unit tests: build directory discovery
+" ============================================================
+
+Execute (FindBuildDir locates build/ upward from current file):
+  let saved_cwd = getcwd()
+  execute 'cd' g:unit_test_dir
+  let g:cmake_build_dir = 'build'
+  call cmake#FindBuildDir()
+Then:
+  AssertEqual g:unit_test_dir . '/build/', b:build_dir
+  execute 'cd' saved_cwd
+
+Execute (FindBuildDir resets and rediscovers on second call):
+  let saved_cwd = getcwd()
+  execute 'cd' g:unit_test_dir
+  let g:cmake_build_dir = 'build'
+  let b:build_dir = '/some/wrong/path'
+  call cmake#FindBuildDir()
+Then:
+  AssertEqual g:unit_test_dir . '/build/', b:build_dir
+  execute 'cd' saved_cwd
+
+" ============================================================
+" Unit tests: session cache
+" ============================================================
+
+Execute (SaveBuildDir writes dotfile):
+  let b:build_dir = g:unit_test_dir . '/build/'
+  call cmake#SaveBuildDir()
+Then:
+  Assert filereadable(g:unit_test_dir . '/.vim-cmake'),
+        \ 'Expected .vim-cmake to exist after SaveBuildDir'
+
+Execute (LoadBuildDir restores from dotfile):
+  execute 'edit ' . g:unit_test_dir . '/CMakeLists.txt'
+  let b:build_dir = g:unit_test_dir . '/build/'
+  call cmake#SaveBuildDir()
+  unlet b:build_dir
+  call cmake#LoadBuildDir()
+Then:
+  Assert exists('b:build_dir'), 'Expected b:build_dir to be set'
+  AssertEqual g:unit_test_dir . '/build/', b:build_dir
+  bwipeout!
+
+Execute (LoadBuildDir ignores stale dotfile and deletes it):
+  execute 'edit ' . g:unit_test_dir . '/CMakeLists.txt'
+  let b:build_dir = g:unit_test_dir . '/build/'
+  let g:foo_dir = g:unit_test_dir . '/foo'
+  let g:cache_file = g:unit_test_dir . '/.vim-cmake'
+  call cmake#SaveBuildDir()
+  call system('mv ' . b:build_dir . ' ' . g:foo_dir)
+  unlet b:build_dir
+  call cmake#LoadBuildDir()
+Then:
+  Assert !exists('b:build_dir'),
+        \ 'Expected b:build_dir to be unset for stale cache'
+  Assert !filereadable(g:cache_file),
+        \ 'Expected stale session cache to be deleted'
+  !rm -rf g:foo_dir
+  bwipeout!
+
+Execute (LoadBuildDir does not overwrite existing b:build_dir):
+  let b:build_dir = g:unit_test_dir . '/build/'
+  call writefile(['/some/other/path/'], g:unit_test_dir . '/.vim-cmake')
+  call cmake#LoadBuildDir()
+Then:
+  AssertEqual g:unit_test_dir . '/build/', b:build_dir,
+        \ 'Expected existing b:build_dir to be preserved'
+
+Execute (FindBuildDir clears session cache before rediscovery):
+  let saved_cwd = getcwd()
+  execute 'cd' g:unit_test_dir
+  let g:cmake_build_dir = 'build'
+  let g:cache_file = g:unit_test_dir . '/.vim-cmake'
+  call writefile(['/some/wrong/path/'], g:cache_file)
+  call cmake#FindBuildDir()
+Then:
+  AssertEqual g:unit_test_dir . '/build/', b:build_dir,
+        \ 'Expected fresh discovery to ignore stale session cache'
+  execute 'cd' saved_cwd
+
+" ============================================================
+" Unit tests: CMakeClean safety checks
+" ============================================================
+
+Execute (CMakeClean refuses when no build dir is set):
+  unlet! b:build_dir
+  redir => g:output
+  call cmake#CleanBuildDir(1)
+  redir END
+Then:
+  Assert g:output =~# 'No build directory set',
+        \ 'Expected error about missing build dir'
+
+Execute (CMakeClean refuses directory without CMakeCache.txt):
+  let b:build_dir = g:unit_test_dir . '/build/'
+  call delete(g:unit_test_dir . '/build/CMakeCache.txt')
+  redir => g:output
+  call cmake#CleanBuildDir(0)
+  redir END
+Then:
+  Assert g:output =~# 'does not look like a CMake build dir',
+        \ 'Expected warning about missing CMakeCache.txt'
+  Assert isdirectory(g:unit_test_dir . '/build/'),
+        \ 'Expected build dir to survive refused clean'
+
+Execute (CMakeClean with bang deletes build dir):
+  let b:build_dir = g:unit_test_dir . '/build/'
+  call cmake#CleanBuildDir(1)
+Then:
+  Assert !isdirectory(g:unit_test_dir . '/build/'),
+        \ 'Expected build dir to be deleted'
+  Assert !exists('b:build_dir'),
+        \ 'Expected b:build_dir to be unset after clean'
+  Assert !filereadable(g:unit_test_dir . '/.vim-cmake'),
+        \ 'Expected .vim-cmake to be deleted after clean'
+
+Execute (CMakeClean refuses to delete home directory):
+  let b:build_dir = fnamemodify('~', ':p')
+  redir => g:output
+  call cmake#CleanBuildDir(1)
+  redir END
+Then:
+  Assert g:output =~# 'Refusing to clean',
+        \ 'Expected refusal for home directory'
+
+" ============================================================
+" Integration tests: CMake configure and build
+" ============================================================
 
 Execute (Find build directory from working dir):
   cd test\ project
-  CMake
-
-  Assert filereadable("tmp-build/CMakeCache.txt"), "CMakeCache.txt should be generated"
-  Assert !filereadable("tmp-build/compile_commands.json"), "Compile commands should not be exported by default"
+  CMakeConfigure
+  let g:cmake_out = system("ls -la tmp-build/")
+  Assert filereadable("tmp-build/CMakeCache.txt"),
+        \ "CMakeCache.txt should be generated"
+  Assert !filereadable("tmp-build/compile_commands.json"),
+        \ "Compile commands should not be exported by default"
 
 Execute (Find build directory from currently open file):
   e test\ project/CMakeLists.txt
-  CMake
-  Assert filereadable("test project/tmp-build/CMakeCache.txt"), "CMakeCache.txt should be generated"
+  CMakeConfigure
+  Assert filereadable("test project/tmp-build/CMakeCache.txt"),
+        \ "CMakeCache.txt should be generated"
+  Assert !filereadable("tmp-build/compile_commands.json"),
+        \ "Compile commands should not be exported by default"
 
 Execute (Create symlink to compilation database):
   let g:cmake_export_compile_commands = 1
   let g:cmake_ycm_symlinks = 1
   cd test\ project
-  CMake
-
+  CMakeConfigure
   " Exporting compile commands does not work with Visual Studio generator
   if !has("win32") && !has("win32unix")
-    Assert filereadable("tmp-build/compile_commands.json"), "Compile commands should be exported"
-    Assert filereadable(resolve("compile_commands.json")), "A symlink should be generated"
+    Assert filereadable("tmp-build/compile_commands.json"),
+        \ "Compile commands should be exported"
+    Assert filereadable(resolve("compile_commands.json")),
+        \ "A symlink should be generated"
   endif
 
 Execute (Open already configured cmake project):
@@ -51,15 +228,15 @@ Execute (Open already configured cmake project):
   silent !cmake .. -DWITH_BYE=ON
   e ../CMakeLists.txt
   CMake
-  silent make
-
+  make
   enew
   if has("win32") || has("win32unix")
     read !Debug/hello.exe
   else
     read !./hello
   endif
+  1delete
 Expect:
-
   Hello World
   Bye World
+

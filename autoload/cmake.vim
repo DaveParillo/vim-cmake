@@ -111,10 +111,15 @@ function! s:cmake_configure(cmake_vim_command_args) abort
   endif
 
   let l:argumentstr      = join(l:argument, " ")
+  let l:build_dir  = fnamemodify(b:build_dir, ':p')
+  " Remove trailing slash before :h, otherwise fnamemodify treats
+  " the empty component after the slash as the last path element
+  let l:build_dir  = substitute(l:build_dir, '/$', '', '')
+  let l:source_dir = fnamemodify(l:build_dir, ':h')
   let l:escaped_build_dir = s:fnameescape(b:build_dir)
-  let l:home_dir          = "-H" . l:escaped_build_dir . "/.."
-  let l:build_dir_path    = "-B" . l:escaped_build_dir
-  let s:cmd = 'cmake ' . l:home_dir . ' ' . l:build_dir_path . ' ' . l:argumentstr
+  let s:cmd = 'cmake -S' . shellescape(l:source_dir)
+            \ . ' -B' . shellescape(l:build_dir)
+            \ . ' ' . l:argumentstr
             \ . " " . join(a:cmake_vim_command_args)
 
   echo s:cmd
@@ -154,6 +159,13 @@ function! cmake#CMake(...) abort
   if !s:find_build_dir()
     return
   endif
+  echom 'vim-cmake: Using build directory: ' . b:build_dir
+  if !filereadable(b:build_dir . '/CMakeCache.txt')
+    echohl WarningMsg
+    echom 'vim-cmake: Project is not configured. Run :CMakeConfigure first.'
+    echohl None
+    return
+  endif
   if g:cmake_use_smp && s:find_smp()
     let l:smp = ' ' . shellescape(b:smp)
   else
@@ -161,9 +173,6 @@ function! cmake#CMake(...) abort
   endif
   let &makeprg = 'sh -c ''cmake --build ' . shellescape(b:build_dir) . l:smp
               \ . ' ${1:+--target "$@"}'' sh'
-  if !filereadable(b:build_dir . '/CMakeCache.txt')
-    call s:cmake_configure([])
-  endif
   execute 'make ' . join(a:000)
 endfunction
 
