@@ -1,12 +1,14 @@
 " autoload/cmake.vim - Implementation for vim-cmake
 " Maintainer:   Dirk Van Haerenborgh <http://vhdirk.github.com/>
-" Version:      0.3
+" Version:      1.0
 
 " ------------------------------------------------------------
 " Internal helpers (s: scope is per-file, so these are private
 " to this autoload script)
 " ------------------------------------------------------------
 
+" Utility function
+" Thanks to tpope/vim-fugitive
 function! s:fnameescape(file) abort
   if exists('*fnameescape')
     return fnameescape(a:file)
@@ -74,6 +76,18 @@ function! s:find_smp() abort
   return 0
 endfunction
 
+" Configure the cmake project in the currently set build dir.
+"
+" This will override any of the following variables if the
+" corresponding vim variable is set:
+"   * CMAKE_INSTALL_PREFIX
+"   * CMAKE_BUILD_TYPE
+"   * CMAKE_BUILD_SHARED_LIBS
+" If the project is not configured already, the following variables will be set
+" whenever the corresponding vim variable for the following is set:
+"   * CMAKE_CXX_COMPILER
+"   * CMAKE_C_COMPILER
+"   * The generator (-G)
 function! s:cmake_configure(cmake_vim_command_args) abort
   exec 'cd' s:fnameescape(b:build_dir)
   let l:argument = []
