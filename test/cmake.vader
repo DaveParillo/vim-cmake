@@ -44,9 +44,9 @@ Before:
 After:
   " Restore integration test environment
   exec "cd" fnameescape(test_dir)
-  echo system("rm -rf 'test project/tmp-build'")
-  echo system("rm -f 'test project/compile_commands.json'")
-  echo system("rm -f 'test project/.vim-cmake'")
+  call delete('test project/tmp-build', 'rf')
+  call delete('test project/compile_commands.json')
+  call delete('test project/.vim-cmake')
 
   " Tear down unit test scratch space
   if exists("g:unit_test_dir")
@@ -113,7 +113,11 @@ Execute (LoadBuildDir ignores stale dotfile and deletes it):
   let g:foo_dir = g:unit_test_dir . '/foo'
   let g:cache_file = g:unit_test_dir . '/.vim-cmake'
   call cmake#SaveBuildDir()
-  call system('mv ' . b:build_dir . ' ' . g:foo_dir)
+  if has("win32") || has("win32unix")
+    call system('move ' . b:build_dir . ' ' . g:foo_dir)
+  else
+    call system('mv ' . b:build_dir . ' ' . g:foo_dir)
+  endif
   unlet b:build_dir
   call cmake#LoadBuildDir()
 Then:
@@ -121,7 +125,7 @@ Then:
         \ 'Expected b:build_dir to be unset for stale cache'
   Assert !filereadable(g:cache_file),
         \ 'Expected stale session cache to be deleted'
-  !rm -rf g:foo_dir
+  call delete(g:foo_dir, 'rf')
   bwipeout!
 
 Execute (LoadBuildDir does not overwrite existing b:build_dir):
