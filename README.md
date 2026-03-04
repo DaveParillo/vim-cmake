@@ -1,6 +1,5 @@
 # vim-cmake
-[![Travis (Linux)](https://travis-ci.org/vhdirk/vim-cmake.svg?branch=master)](https://travis-ci.org/vhdirk/vim-cmake)
-[![AppVeyor (Windows)](https://ci.appveyor.com/api/projects/status/ns1o9252o2rrmv6g?svg=true)](https://ci.appveyor.com/project/vhdirk/vim-cmake)
+[![Tests](https://github.com/DaveParillo/vim-cmake/actions/workflows/test.yml/badge.svg)](https://github.com/DaveParillo/vim-cmake/actions/workflows/test.yml)
 
 vim-cmake is a Vim plugin to make working with CMake a little nicer.
 
@@ -11,11 +10,14 @@ disliked setting makeprg manually each time. This plugin does just that.
 
 ### Commands
 
- * `:CMake` searches for the closest directory named build in an upwards search,
-and whenever one is found, it runs the cmake command there, assuming the CMakeLists.txt
-file is just one directory above. Any arguments given to :CMake will be directly passed
+ * `:CMakeConfigure` searches for the closest directory named build in an upwards search,
+and if found, it runs the `cmake -S <dir> -B <dir> command there, assuming the CMakeLists.txt
+file is just one directory above. Any arguments given to :CMakeConfigure will be directly passed
 on to the cmake command. It also sets the working directory of the make command, so
 you can just use quickfix as with a normal Makefile project.
+
+ * `:CMakeBuild` executes the `cmake --build` command in a directory configured
+ previously by the `:CMakeConfigure` command.
 If you have the [AsyncRun plugin](https://github.com/skywind3000/asyncrun.vim)
 installed, it will be used automatically and you will be able to check the
 result of the cmake command in the quickfix as well.
@@ -49,6 +51,10 @@ result of the cmake command in the quickfix as well.
 
 ## Installation
 
+With vim 8.1 and later, no plugins are required:
+
+    mkdir ~/.vim/pack/dev/start/
+    git clone git://github.com/vhdirk/vim-cmake.git ~/.vim/pack/dev/start/vim-cmake
 
 ### Vim-pathogen
 
