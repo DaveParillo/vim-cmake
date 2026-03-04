@@ -227,7 +227,7 @@ Execute (Open already configured cmake project):
   cd test\ project/tmp-build
   silent !cmake .. -DWITH_BYE=ON
   e ../CMakeLists.txt
-  CMake
+  CMakeBuild
   make
   enew
   if has("win32") || has("win32unix")

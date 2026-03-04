@@ -30,7 +30,7 @@ if !executable("cmake")
 endif
 
 " Public Interface:
-command! -nargs=? -complete=customlist,s:list_targets CMake call cmake#CMake(<f-args>)
+command! -nargs=? -complete=customlist,s:list_targets CMakeBuild call cmake#CMakeBuild(<f-args>)
 command! -nargs=? CMakeConfigure    call cmake#Configure(<f-args>)
 command! -bang    CMakeClean        call cmake#CleanBuildDir(<bang>0)
 command!          CMakeFindBuildDir call cmake#FindBuildDir()

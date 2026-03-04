@@ -15,9 +15,10 @@ sessions, and wires up |'makeprg'| so that |:make| builds in the correct
 directory.
 
 ==============================================================================
-COMMANDS                                        *cmake-commands* *:CMake*
+COMMANDS                                        *cmake-commands* *:CMakeBuild*
 
-:CMake [target] [args]  Runs the cmake command as `'cmake ..'`, starting in
+:CMakeBuild [target] [args]
+                        Runs the cmake command as `'cmake ..'`, starting in
                         first directory called 'build', found in an upwards
                         search. All arguments are directly passed on to CMake.
                         Also modifies the |':make'| command to build in
@@ -169,7 +170,7 @@ the project .gitignore: >
 ==============================================================================
 LICENSE                                                 *cmake-license*
 
-Copyright (c) Dirk Van Haerenborgh. Distributed under the
+Copyright (c) Dirk Van Haerenborgh, @SteveDeFacto. Distributed under the
 same terms as Vim itself. See |license|.
 
  vim:tw=78:ts=8:ft=help:norl:

@@ -155,7 +155,7 @@ function! cmake#Configure(...) abort
   call s:cmake_configure(a:000)
 endfunction
 
-function! cmake#CMake(...) abort
+function! cmake#CMakeBuild(...) abort
   if !s:find_build_dir()
     return
   endif
@@ -171,9 +171,11 @@ function! cmake#CMake(...) abort
   else
     let l:smp = ''
   endif
-  let &makeprg = 'sh -c ''cmake --build ' . shellescape(b:build_dir) . l:smp
+  let $CMAKE_BUILD_DIR = b:build_dir
+  let &makeprg = 'sh -c ''cmake --build  "$CMAKE_BUILD_DIR"' . l:smp
               \ . ' ${1:+--target "$@"}'' sh'
   execute 'make ' . join(a:000)
+  unlet $CMAKE_BUILD_DIR
 endfunction
 
 function! cmake#FindBuildDir() abort
