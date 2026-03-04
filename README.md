@@ -1,5 +1,6 @@
 # vim-cmake
 [![Test](https://github.com/DaveParillo/vim-cmake/actions/workflows/test.yaml/badge.svg)](https://github.com/DaveParillo/vim-cmake/actions/workflows/test.yaml)
+
 vim-cmake is a Vim plugin to make working with CMake a little nicer.
 
 I got tired of navigating to the build directory each time, and I also
