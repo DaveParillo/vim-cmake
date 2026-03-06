@@ -17,13 +17,21 @@ Before:
     call delete(g:unit_test_dir, 'rf')
   endif
   let g:unit_test_dir = tempname()
-  call mkdir(g:unit_test_dir . '/build', 'p')
+  if has("win32") || has("win32unix")
+      call mkdir(g:unit_test_dir . '\build', 'p')
+  else
+      call mkdir(g:unit_test_dir . '/build', 'p')
+  endif
   call writefile([''], g:unit_test_dir . '/build/CMakeCache.txt')
 
   " Clean integration test build directory
   Assert !isdirectory("test project/tmp-build"),
         \ "TEST ERROR: build directory was not properly deleted"
-  echo system("mkdir 'test project/tmp-build'")
+  if has("win32") || has("win32unix")
+      call mkdir('test project\tmp-build', 'p')
+  else
+      call mkdir('test project/tmp-build', 'p')
+  endif
   Assert isdirectory("test project/tmp-build"),
         \ "TEST ERROR: build directory was not created"
 
