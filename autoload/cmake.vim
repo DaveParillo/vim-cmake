@@ -219,7 +219,7 @@ function! cmake#LoadBuildDir() abort
   if empty(l:lines)
     return
   endif
-  let l:candidate = fnamemodify(l:lines[0], ':p')
+  let l:candidate = expand(fnamemodify(l:lines[0], ':p'))
   if isdirectory(l:candidate)
     let b:build_dir = l:candidate
   else
