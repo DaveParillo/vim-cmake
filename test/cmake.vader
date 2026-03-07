@@ -148,95 +148,96 @@ Then:
 " Unit tests: CMakeClean safety checks
 " ============================================================
 
-" Execute (CMakeClean refuses when no build dir is set):
-"   unlet! b:build_dir
-"   redir => g:output
-"   call cmake#CleanBuildDir(1)
-"   redir END
-" Then:
-"   Assert g:output =~# 'No build directory set',
-"         \ 'Expected error about missing build dir'
+Execute (CMakeClean refuses when no build dir is set):
+  unlet! b:build_dir
+  redir => g:output
+  call cmake#CleanBuildDir(1)
+  redir END
+Then:
+  Assert g:output =~# 'No build directory set',
+        \ 'Expected error about missing build dir'
 
-" Execute (CMakeClean refuses directory without CMakeCache.txt):
-"   let b:build_dir = g:unit_test_dir . '/build/'
-"   call delete(g:unit_test_dir . '/build/CMakeCache.txt')
-"   redir => g:output
-"   call cmake#CleanBuildDir(0)
-"   redir END
-" Then:
-"   Assert g:output =~# 'does not look like a CMake build dir',
-"         \ 'Expected warning about missing CMakeCache.txt'
-"   Assert isdirectory(g:unit_test_dir . '/build/'),
-"         \ 'Expected build dir to survive refused clean'
+Execute (CMakeClean refuses directory without CMakeCache.txt):
+  let b:build_dir = g:unit_test_dir . '/build/'
+  call delete(g:unit_test_dir . '/build/CMakeCache.txt')
+  redir => g:output
+  call cmake#CleanBuildDir(0)
+  redir END
+Then:
+  Assert g:output =~# 'does not look like a CMake build dir',
+        \ 'Expected warning about missing CMakeCache.txt'
+  Assert isdirectory(g:unit_test_dir . '/build/'),
+        \ 'Expected build dir to survive refused clean'
 
-" Execute (CMakeClean with bang deletes build dir):
-"   let b:build_dir = g:unit_test_dir . '/build/'
-"   call cmake#CleanBuildDir(1)
-" Then:
-"   Assert !isdirectory(g:unit_test_dir . '/build/'),
-"         \ 'Expected build dir to be deleted'
-"   Assert !exists('b:build_dir'),
-"         \ 'Expected b:build_dir to be unset after clean'
-"   Assert !filereadable(g:unit_test_dir . '/.vim-cmake'),
-"         \ 'Expected .vim-cmake to be deleted after clean'
+Execute (CMakeClean with bang deletes build dir):
+  let b:build_dir = g:unit_test_dir . '/build/'
+  call cmake#CleanBuildDir(1)
+Then:
+  Assert !isdirectory(g:unit_test_dir . '/build/'),
+        \ 'Expected build dir to be deleted'
+  Assert !exists('b:build_dir'),
+        \ 'Expected b:build_dir to be unset after clean'
+  Assert !filereadable(g:unit_test_dir . '/.vim-cmake'),
+        \ 'Expected .vim-cmake to be deleted after clean'
 
-" Execute (CMakeClean refuses to delete home directory):
-"   let b:build_dir = fnamemodify('~', ':p')
-"   redir => g:output
-"   call cmake#CleanBuildDir(1)
-"   redir END
-" Then:
-"   Assert g:output =~# 'Refusing to clean',
-"         \ 'Expected refusal for home directory'
+Execute (CMakeClean refuses to delete home directory):
+  let b:build_dir = fnamemodify('~', ':p')
+  redir => g:output
+  call cmake#CleanBuildDir(1)
+  redir END
+Then:
+  Assert g:output =~# 'Refusing to clean',
+        \ 'Expected refusal for home directory'
 
 " ============================================================
 " Integration tests: CMake configure and build
 " ============================================================
 
-" Execute (Find build directory from working dir):
-"   cd test\ project
-"   CMakeConfigure
-"   let g:cmake_out = system("ls -la tmp-build/")
-"   Assert filereadable("tmp-build/CMakeCache.txt"),
-"         \ "CMakeCache.txt should be generated"
-"   Assert !filereadable("tmp-build/compile_commands.json"),
-"         \ "Compile commands should not be exported by default"
+Execute (Find build directory from working dir):
+  exec "cd" "test project"
+  CMakeConfigure
+  Assert filereadable("tmp-build/CMakeCache.txt"),
+        \ "CMakeCache.txt should be generated"
 
-" Execute (Find build directory from currently open file):
-"   e test\ project/CMakeLists.txt
-"   CMakeConfigure
-"   Assert filereadable("test project/tmp-build/CMakeCache.txt"),
-"         \ "CMakeCache.txt should be generated"
-"   Assert !filereadable("tmp-build/compile_commands.json"),
-"         \ "Compile commands should not be exported by default"
+Execute (Find build directory from currently open file):
+  e test\ project/CMakeLists.txt
+  CMakeConfigure
+  Assert filereadable("test project/tmp-build/CMakeCache.txt"),
+        \ "CMakeCache.txt should be generated"
+  Assert !filereadable("tmp-build/compile_commands.json"),
+        \ "Compile commands should not be exported by default"
 
-" Execute (Create symlink to compilation database):
-"   let g:cmake_export_compile_commands = 1
-"   let g:cmake_ycm_symlinks = 1
-"   cd test\ project
-"   CMakeConfigure
-"   " Exporting compile commands does not work with Visual Studio generator
-"   if !has("win32") && !has("win32unix")
-"     Assert filereadable("tmp-build/compile_commands.json"),
-"         \ "Compile commands should be exported"
-"     Assert filereadable(resolve("compile_commands.json")),
-"         \ "A symlink should be generated"
-"   endif
+Execute (Create symlink to compilation database):
+  let g:cmake_export_compile_commands = 1
+  let g:cmake_ycm_symlinks = 1
+  cd test\ project
+  CMakeConfigure
+  " Exporting compile commands does not work with Visual Studio generator
+  if !has("win32") && !has("win32unix")
+    Assert filereadable("tmp-build/compile_commands.json"),
+        \ "Compile commands should be exported"
+    Assert filereadable(resolve("compile_commands.json")),
+        \ "A symlink should be generated"
+  else
+    Log "Export compile_commands skipped on windows."
+  endif
 
-" Execute (Open already configured cmake project):
-"   cd test\ project/tmp-build
-"   silent !cmake .. -DWITH_BYE=ON
-"   e ../CMakeLists.txt
-"   CMakeBuild
-"   make
-"   enew
-"   if has("win32") || has("win32unix")
-"     read !Debug/hello.exe
-"   else
-"     read !./hello
-"   endif
-"   1delete
-" Expect:
-"   Hello World
-"   Bye World
+Execute (Open already configured cmake project):
+  cd test\ project/tmp-build
+  silent !cmake .. -DWITH_BYE=ON
+  e ../CMakeLists.txt
+  CMakeBuild
+  if has("win32") || has("win32unix")
+    nmake
+    enew
+    read !Debug/hello.exe
+  else
+    make
+    enew
+    read !./hello
+  endif
+  1delete
+Expect:
+  Hello World
+  Bye World
 

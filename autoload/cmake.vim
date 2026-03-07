@@ -2,11 +2,6 @@
 " Maintainer:   Dirk Van Haerenborgh <http://vhdirk.github.com/>
 " Version:      1.0
 
-" ------------------------------------------------------------
-" Internal helpers (s: scope is per-file, so these are private
-" to this autoload script)
-" ------------------------------------------------------------
-
 " Utility function
 " Thanks to tpope/vim-fugitive
 function! s:fnameescape(file) abort
@@ -89,6 +84,10 @@ endfunction
 "   * CMAKE_C_COMPILER
 "   * The generator (-G)
 function! s:cmake_configure(cmake_vim_command_args) abort
+  if has('win32')
+    let l:save_shellslash = &shellslash
+    set noshellslash
+  endif
   exec 'cd' s:fnameescape(b:build_dir)
   let l:argument = []
   " Only change values of variables if project is not configured already,
@@ -128,7 +127,8 @@ function! s:cmake_configure(cmake_vim_command_args) abort
   let l:build_dir  = fnamemodify(b:build_dir, ':p')
   " Remove trailing slash before :h, otherwise fnamemodify treats
   " the empty component after the slash as the last path element
-  let l:build_dir  = substitute(l:build_dir, '/$', '', '')
+  " Remove trailing slash before :h - must handle both / and \ on Windows
+  let l:build_dir = substitute(l:build_dir, '[/\\]$', '', '')
   let l:source_dir = fnamemodify(l:build_dir, ':h')
   let l:escaped_build_dir = s:fnameescape(b:build_dir)
   let s:cmd = 'cmake -S' . shellescape(l:source_dir)
@@ -156,6 +156,9 @@ function! s:cmake_configure(cmake_vim_command_args) abort
     echom "Created symlink to compilation database"
   endif
   exec 'cd -'
+  if has('win32')
+    let &shellslash = l:save_shellslash
+  endif
 endfunction
 
 " ------------------------------------------------------------
