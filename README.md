@@ -11,7 +11,7 @@ disliked setting makeprg manually each time. This plugin does just that.
 ### Commands
 
  * `:CMakeConfigure` searches for the closest directory named build in an upwards search,
-and if found, it runs the `cmake -S <dir> -B <dir> command there, assuming the CMakeLists.txt
+and if found, it runs the `cmake -S 'source_dir' -B 'build_dir'` command there, assuming the CMakeLists.txt
 file is just one directory above. Any arguments given to :CMakeConfigure will be directly passed
 on to the cmake command. It also sets the working directory of the make command, so
 you can just use quickfix as with a normal Makefile project.
