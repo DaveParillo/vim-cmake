@@ -229,11 +229,13 @@ Execute (Open already configured cmake project):
   CMakeBuild
   make
   enew
-  if has("win32") || has("win32unix")
-    read !./Debug/hello.exe
+  if has('win32') || has('win32unix')
+    let exe = 'Debug/hello.exe'
   else
-    read !./hello
+    let exe = './hello'
   endif
+  let result = systemlist([exe])
+  call append(0, result)
   1delete
 Expect:
   Hello World
