@@ -227,13 +227,11 @@ Execute (Open already configured cmake project):
   silent !cmake .. -DWITH_BYE=ON
   e ../CMakeLists.txt
   CMakeBuild
+  make
+  enew
   if has("win32") || has("win32unix")
-    nmake
-    enew
     read !Debug/hello.exe
   else
-    make
-    enew
     read !./hello
   endif
   1delete
