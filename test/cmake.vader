@@ -230,6 +230,7 @@ Execute (Open already configured cmake project):
   make
   enew
   if has("win32") || has("win32unix")
+    Log system("dir /s")
     read !Debug/hello.exe
   else
     read !./hello
