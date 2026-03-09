@@ -1,6 +1,5 @@
 # vim-cmake
-[![Travis (Linux)](https://travis-ci.org/vhdirk/vim-cmake.svg?branch=master)](https://travis-ci.org/vhdirk/vim-cmake)
-[![AppVeyor (Windows)](https://ci.appveyor.com/api/projects/status/ns1o9252o2rrmv6g?svg=true)](https://ci.appveyor.com/project/vhdirk/vim-cmake)
+[![Test](https://github.com/DaveParillo/vim-cmake/actions/workflows/test.yaml/badge.svg)](https://github.com/DaveParillo/vim-cmake/actions/workflows/test.yaml)
 
 vim-cmake is a Vim plugin to make working with CMake a little nicer.
 
@@ -11,11 +10,14 @@ disliked setting makeprg manually each time. This plugin does just that.
 
 ### Commands
 
- * `:CMake` searches for the closest directory named build in an upwards search,
-and whenever one is found, it runs the cmake command there, assuming the CMakeLists.txt
-file is just one directory above. Any arguments given to :CMake will be directly passed
+ * `:CMakeConfigure` searches for the closest directory named build in an upwards search,
+and if found, it runs the `cmake -S 'source_dir' -B 'build_dir'` command there, assuming the CMakeLists.txt
+file is just one directory above. Any arguments given to :CMakeConfigure will be directly passed
 on to the cmake command. It also sets the working directory of the make command, so
 you can just use quickfix as with a normal Makefile project.
+
+ * `:CMakeBuild` executes the `cmake --build` command in a directory configured
+ previously by the `:CMakeConfigure` command.
 If you have the [AsyncRun plugin](https://github.com/skywind3000/asyncrun.vim)
 installed, it will be used automatically and you will be able to check the
 result of the cmake command in the quickfix as well.
@@ -49,6 +51,40 @@ result of the cmake command in the quickfix as well.
 
 ## Installation
 
+With Vim 8.1 and later, no external plugin manager is required. Vim includes a
+built-in package system that automatically loads plugins placed in specific
+directories under `pack/`.
+
+Create the `start` directory if it does not already exist:
+
+    mkdir -p ~/.vim/pack/dev/start/
+
+Clone the repository into that directory:
+
+    git clone https://github.com/vhdirk/vim-cmake.git \
+        ~/.vim/pack/dev/start/vim-cmake
+
+Plugins placed in `pack/*/start/` are automatically loaded when Vim starts.
+No additional configuration is required.
+
+If you prefer to install the plugin but load it manually, place it in the
+`opt` directory instead:
+
+    mkdir -p ~/.vim/pack/dev/opt/
+    git clone https://github.com/vhdirk/vim-cmake.git \
+        ~/.vim/pack/dev/opt/vim-cmake
+
+Then load it when needed:
+
+    :packadd vim-cmake
+
+### Verifying the installation
+
+Restart Vim and run:
+
+    :CMakeBuild
+
+If the command is recognized, the plugin is installed correctly.
 
 ### Vim-pathogen
 
