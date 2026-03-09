@@ -18,31 +18,19 @@ directory.
 COMMANDS                                        *cmake-commands* *:CMakeBuild*
 
 :CMakeBuild [target] [args]
-                        Runs the cmake command as `'cmake ..'`, starting in
-                        first directory called 'build', found in an upwards
-                        search. All arguments are directly passed on to CMake.
-                        Also modifies the |':make'| command to build in
-                        that directory.
+                        CMakeBuild searches for the configured build directory
+                        and if found updates the |:makeprg| option and then
+                        builds the [target] using |:make|.
 
-                        This command will locate the build directory, configure
-                        the project if it has not been configured yet 
-                        (no CMakeCache.txt found), then build [target] using
-                        |:make|.
+                        All arguments after the first are directly passed on
+                        to CMake.
 
                         The first parameter must be a target name and other
                         cmake parameters can follow the target in any order.
 
-                        Build directory discovery follows this order:
-                          1. Use |b:build_dir| if already set.
-                          2. Restore from the session cache (.vim-cmake).
-                          3. Search upward from the current file for a
-                             directory named |g:cmake_build_dir|.
-
-                        Once found, the build directory is saved to the
-                        session cache automatically.
-
-                        Configure is skipped when CMakeCache.txt already
-                        exists. Use |:CMakeConfigure| to force a re-run.
+                        Use |:CMakeConfigure| to find a build directory,
+                        generate toolchain files, and update the
+                        *cmake-cache* file.
 
                         Tab completion is available for [target]: >
                             :CMake my_<Tab>
@@ -52,7 +40,20 @@ COMMANDS                                        *cmake-commands* *:CMakeBuild*
 
                                                 *:CMakeConfigure*
 :CMakeConfigure [args]  Run cmake configuration in the build directory,
-                        passing [args] directly to cmake. Use this to
+                        passing [args] directly to cmake.
+                        CMakeConfigure searches for the build directory
+                        before writing configuration files there
+
+                        Build directory discovery follows this order:
+                          1. Use |b:build_dir| if already set.
+                          2. Restore from the *cmake-cache* (.vim-cmake).
+                          3. Search upward from the current file for a
+                             directory named |g:cmake_build_dir|.
+
+                        Once found, the build directory is saved to the
+                        *cmake-cache* automatically.
+
+                        Use this to
                         explicitly re-run configuration, for example after
                         changing a compiler or build type: >
                             :CMakeConfigure -DCMAKE_BUILD_TYPE=Debug
